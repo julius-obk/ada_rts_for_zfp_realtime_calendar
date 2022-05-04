@@ -1,0 +1,9 @@
+name = "ada_rts_for_zfp_realtime_calendar"
+description = "Shiny new project"
+version = "0.0.0"
+
+authors = ["julius"]
+maintainers = ["julius <juliu5@pm.me>"]
+maintainers-logins = ["ju1iu5"]
+[[depends-on]]  # Added by alr
+aunit = "^22.0.0"  # Added by alr
