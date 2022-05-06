@@ -1,6 +1,10 @@
 with "config/ada_rts_for_zfp_realtime_calendar_config.gpr";
 project Ada_Rts_For_Zfp_Realtime_Calendar is
 
+   package IDE is
+      for VCS_Kind use "Auto";
+   end IDE;
+
    for Library_Name use "Ada_Rts_For_Zfp_Realtime_Calendar";
    for Library_Version use Project'Library_Name & ".so." & Ada_Rts_For_Zfp_Realtime_Calendar_Config.Crate_Version;
 
