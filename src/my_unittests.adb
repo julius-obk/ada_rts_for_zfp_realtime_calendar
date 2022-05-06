@@ -181,7 +181,6 @@ package body My_Unittests is
          Assert (S2 = s, S2'Img & " " & s'Img & " not matching");
 
       end;
-
    end Test_Set_Clock_Time;
 
    Done : Boolean := False with
@@ -263,9 +262,39 @@ package body My_Unittests is
       Info;
       Td2.Delay_Until (Future);
 
+      Print_Time;
+
    end Test_Cal_Delay;
 
-   procedure Test_Set_Event_Periodicly (T : in out Test_Cases.Test_Case'Class);
+   procedure Test_Set_Event_Periodicly (T : in out Test_Cases.Test_Case'Class)
+   is
+      use Calendar;
+      Now         : Time    := Clock;
+      Future      : Time    := Now + 3.0;
+      Event_Count : Integer := 0;
+
+      procedure Count_Alarms is
+      begin
+         Alarm;
+         Event_Count := Event_Count + 1;
+         Put_Line ("alarm has been raised" & Event_Count'Img & " times");
+      end Count_Alarms;
+
+      Alarm_Pt : Event_Handler := Alarm'Access;
+
+      My_Event : Calendar_Event :=
+        Set_Handler
+          (After_Duration => Future, Do_This => Alarm_Pt,
+           Do_Periodicly  => True);
+   begin
+      while Event_Count > 3 loop
+         null;
+      end loop;
+      Done := False;
+      Cancel_Handler (Event => My_Event, Cancelled => Done);
+      Put_Line ("Event has been canceled? " & Done'Img);
+   end Test_Set_Event_Periodicly;
+
    procedure Test_RT_Get_Clock_Time (T : in out Test_Cases.Test_Case'Class);
 
 end My_Unittests;
