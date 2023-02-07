@@ -200,12 +200,12 @@ package body Calendar_Generic is
    -- count_days --
    ----------------
 
-   function count_days (Seconds : Duration) return Natural is
-      count : Natural := Natural (Seconds);
+   function Count_Days (Seconds : Duration) return Natural is
+      Count : Natural := Natural (Seconds);
    begin
-      count := count / Seconds_Per_Day;
-      return count;
-   end count_days;
+      Count := Count / Seconds_Per_Day;
+      return Count;
+   end Count_Days;
 
    -----------
    -- Split --
@@ -268,42 +268,39 @@ package body Calendar_Generic is
       Seconds := Day_Duration (86_400.0 * F);
    end Split;
 
-
    -----------
    -- Split --
    -----------
 
-   procedure Split(Seconds : Day_Duration; H : out Hour_Number;
-                   M : out Minute_Number; S : out Second_Number) is
+   procedure Split
+     (Seconds :     Day_Duration; H : out Hour_Number; M : out Minute_Number;
+      S       : out Second_Number)
+   is
       subtype Lli is Long_Long_Integer;
       S_Per_H : constant := 60 * 60;
       S_Per_M : constant := 60;
-      temp : lli := lli(Seconds);
+      Temp    : Lli      := Lli (Seconds);
    begin
-      H := Hour_Number(temp / S_Per_H);
-      temp := temp - lli(H * S_Per_H);
-      M := Minute_Number(temp / S_Per_M);
-      temp := temp - lli(M * S_Per_M);
-      S := Second_Number( temp);
+      H    := Hour_Number (Temp / S_Per_H);
+      Temp := Temp - Lli (H * S_Per_H);
+      M    := Minute_Number (Temp / S_Per_M);
+      Temp := Temp - Lli (M * S_Per_M);
+      S    := Second_Number (Temp);
    end Split;
 
    -- get hours, mins and secs of a Number of Seconds
 
-
-
-   procedure HMS_To_Day_Duration ( This : out Day_Duration;
-                                   Hours : Hour_Number;
-                                   Minutes : Minute_Number;
-                                   Secs : Second_Number) is
-      subtype dd is Day_Duration;
-      S_Per_H : constant Dd := 60.0*60.0;
-      S_Per_M : constant dd := 60.0;
+   procedure HMS_To_Day_Duration
+     (This : out Day_Duration; Hours : Hour_Number; Minutes : Minute_Number;
+      Secs :     Second_Number)
+   is
+      subtype Dd is Day_Duration;
+      S_Per_H : constant Dd := 60.0 * 60.0;
+      S_Per_M : constant Dd := 60.0;
    begin
-      This := Dd(Secs) + Dd(Hours) * S_Per_H +
-        DD(Minutes) * S_Per_M;
-      end HMS_To_Day_Duration;
+      This := Dd (Secs) + Dd (Hours) * S_Per_H + Dd (Minutes) * S_Per_M;
+   end HMS_To_Day_Duration;
    -- generate day_duration out of hours/mins/secs
-
 
    -------------
    -- Time_Of --
@@ -463,23 +460,23 @@ package body Calendar_Generic is
    ------------
 
    function Clock return Time is
-      s     : register_seconds;
-      sub_s : register_sub_seconds;
-      now   : Time := Time'First;
-      temp  : Duration;
+      S     : register_seconds;
+      Sub_S : register_sub_seconds;
+      Now   : Time := Time'First;
+      Temp  : Duration;
    begin
-      Clock_Func (seconds => s, sub_seconds => sub_s);
+      Clock_Func (seconds => S, sub_seconds => Sub_S);
 
       --seconds, add value of radix time
-      temp := Duration (s) + Duration (Radix_Time) * Secs_Per_Day;
+      Temp := Duration (S) + Duration (Radix_Time) * Secs_Per_Day;
 
       --sub seconds
-      temp := temp + Duration (sub_s) * delta_sub_seconds;
+      Temp := Temp + Duration (Sub_S) * Delta_Sub_Seconds;
 
       --convert seconds to time by diverting with seconds per day
-      now := Time (temp / Secs_Per_Day);
+      Now := Time (Temp / Secs_Per_Day);
 
-      return now;
+      return Now;
    end Clock;
 
    ---------------
@@ -491,47 +488,46 @@ package body Calendar_Generic is
       Hour     : Hour_Number; Minute : Minute_Number; Second : Second_Number;
       Fraction : Fractional_Seconds := 0.0)
    is
-      secs     : register_seconds;
-      sub_secs : register_sub_seconds;
-      new_time : Time;
+      Secs     : register_seconds;
+      Sub_Secs : register_sub_seconds;
+      New_Time : Time;
       Raw_Secs : Duration;
 
       Day_Secs : Day_Duration;
    begin
-      HMS_To_Day_Duration (This => Day_Secs,
-                           Hours => Hour,
-                           Minutes => Minute,
-                           Secs => Second);
-      new_time :=
-        Time_Of (Year => Year, Month => Month, Day => Day, Seconds => Day_Secs);
+      HMS_To_Day_Duration
+        (This => Day_Secs, Hours => Hour, Minutes => Minute, Secs => Second);
+      New_Time :=
+        Time_Of
+          (Year => Year, Month => Month, Day => Day, Seconds => Day_Secs);
 
       --check if we set the clock backwards (below the value of radix time)
       --, if so set new radix time and set clock register to 0
-      if new_time < Radix_Time then
-         Radix_Time := new_time;
+      if New_Time < Radix_Time then
+         Radix_Time := New_Time;
       end if;
 
       --compute Time into second count for seconds register
-      raw_secs := (Duration (new_time) * Secs_Per_Day);
-      raw_secs := raw_secs - (Duration (Radix_Time) * Secs_Per_Day);
+      Raw_Secs := (Duration (New_Time) * Secs_Per_Day);
+      Raw_Secs := Raw_Secs - (Duration (Radix_Time) * Secs_Per_Day);
 
       --check if the value of raw seconds fits in the register or already is
    --the last value, if so we set value of Radix_Time to the new time and set
       --0 to our register
-      if Long_Long_Integer (raw_secs) >=
+      if Long_Long_Integer (Raw_Secs) >=
         Long_Long_Integer (register_seconds'Last)
       then
-         Radix_Time := new_time;
-         secs       := 0;
+         Radix_Time := New_Time;
+         Secs       := 0;
       else
-         secs := register_seconds (raw_secs);
+         Secs := register_seconds (Raw_Secs);
       end if;
 
       --compute sub seconds for register sub seconds
-      raw_secs := raw_secs - Duration (secs);
-      raw_secs := raw_secs + Fraction * delta_sub_seconds;
-      sub_secs := register_sub_seconds (raw_secs);
-      Set_Clock_Func (sec => secs, sub_sec => sub_secs);
+      Raw_Secs := Raw_Secs - Duration (Secs);
+      Raw_Secs := Raw_Secs + Fraction * Delta_Sub_Seconds;
+      Sub_Secs := register_sub_seconds (Raw_Secs);
+      Set_Clock_Func (sec => Secs, sub_sec => Sub_Secs);
 
    end Set_Clock;
 
@@ -539,12 +535,12 @@ package body Calendar_Generic is
    -- time_as_seconds --
    ---------------------
 
-   function time_as_seconds (this : Time) return Long_Long_Integer is
+   function Time_As_Seconds (This : Time) return Long_Long_Integer is
       Seconds : Long_Long_Integer;
    begin
-      Seconds := Long_Long_Integer (this * Secs_Per_Day);
+      Seconds := Long_Long_Integer (This * Secs_Per_Day);
       return Seconds;
-   end time_as_seconds;
+   end Time_As_Seconds;
 
    --------------------
    -- Clock_Overflow --
@@ -552,36 +548,41 @@ package body Calendar_Generic is
 
    procedure Clock_Overflow is
       Secs      : Duration;
-      new_radix : Time;
+      New_Radix : Time;
    begin
-         Secs       := Duration (register_seconds'Last);
-         new_radix  := Secs + Radix_Time;
-         Radix_Time := new_radix;
-      exception
-         when Constraint_Error =>
-            raise Time_Error
-              with "Seconds :" & Duration'Image (Secs) & "  +  " &
-              Time'Image (Radix_Time) & "not valid";
+      Secs       := Duration (register_seconds'Last);
+      New_Radix  := Secs + Radix_Time;
+      Radix_Time := New_Radix;
+   exception
+      when Constraint_Error =>
+         raise Time_Error
+           with "Seconds :" & Duration'Image (Secs) & "  +  " &
+           Time'Image (Radix_Time) & "not valid";
    end Clock_Overflow;
 
+   procedure Recalculate_Sub_Sec_Detla (Overrun_Value : register_sub_seconds)
+   is
+   begin
+      Delta_Sub_Seconds := 1.0 / Duration (Overrun_Value);
+   end Recalculate_Sub_Sec_Detla;
 
    -----------------
    -- Set_Handler --
    -----------------
 
-
-   function Set_Handler (At_Time : Time; Do_This : Event_Handler)
-                         return Calendar_Event is
+   function Set_Handler
+     (At_Time : Time; Do_This : Event_Handler) return Calendar_Event
+   is
       Event : aliased Calendar_Event;
    begin
-      Event.Timeout := At_Time;
-      Event.Do_This := Do_This;
+      Event.Timeout  := At_Time;
+      Event.Do_This  := Do_This;
       Event.Canceled := False;
 
       --check if we have a free event slot, if so put in our event
-      for item of Event_List loop
-         if item = Null then
-            	   	item := Event'Unchecked_Access;
+      for Item of Event_List loop
+         if Item = null then
+            Item := Event'Unchecked_Access;
             --call Queue_Manager...
             Queue_Manager;
             return Event;
@@ -596,23 +597,22 @@ package body Calendar_Generic is
    -- Set_Handler --
    -----------------
 
-   function Set_Handler( After_Duration : Duration;
-                         Do_This :        Event_Handler;
-                         Do_Periodicly : Boolean := False)
-                        return Calendar_Event
+   function Set_Handler
+     (After_Duration : Duration; Do_This : Event_Handler;
+      Do_Periodicly  : Boolean := False) return Calendar_Event
    is
-      Event : aliased Calendar_Event;
-      new_time : Time := Clock + After_Duration;
+      Event    : aliased Calendar_Event;
+      New_Time : Time := Clock + After_Duration;
    begin
-      Event.Timeout := new_time;
-      Event.Do_This := Do_This;
-      Event.Canceled := False;
+      Event.Timeout       := New_Time;
+      Event.Do_This       := Do_This;
+      Event.Canceled      := False;
       Event.Do_Periodicly := Do_Periodicly;
 
       --check if we have a free event slot, if so put in our event
-      for item of Event_List loop
-         if item = Null then
-            item := Event'Unchecked_Access;
+      for Item of Event_List loop
+         if Item = null then
+            Item := Event'Unchecked_Access;
             --call Queue_Manager...
             Queue_Manager;
             return Event;
@@ -632,28 +632,27 @@ package body Calendar_Generic is
       return Event.Do_This;
    end Current_Handler;
 
-
    --------------------
    -- Cancel_Handler --
    --------------------
 
    procedure Cancel_Handler
-     (Event : in out Calendar_Event; Cancelled : out Boolean) is
+     (Event : in out Calendar_Event; Cancelled : out Boolean)
+   is
    begin
       if not Event.Canceled then
          for Item of Event_List loop
             if Event = Item.all then
-               Item := Null;
+               Item := null;
                -- call Queue_Manager for cleanup
                Queue_Manager;
                Event.Canceled := True;
-               Cancelled := True;
+               Cancelled      := True;
                return;
             end if;
          end loop;
       end if;
    end Cancel_Handler;
-
 
    -------------------
    -- Time_Of_Event --
@@ -665,16 +664,16 @@ package body Calendar_Generic is
    end Time_Of_Event;
 
    function Find_Next_Timeout return Time is
-      timeout : Time := Time'Last;
+      Timeout : Time := Time'Last;
    begin
       -- iter through Event_List, find the lowest timeout time,
       -- if the list is empty we will just return Time'Last as Valid value
-      for item of Event_List when item /= null loop
-         if item.Timeout < timeout then
-            timeout := item.Timeout;
+      for Item of Event_List loop
+         if Item /= null and then Item.Timeout < Timeout then
+            Timeout := Item.Timeout;
          end if;
       end loop;
-      return timeout;
+      return Timeout;
    end Find_Next_Timeout;
 
    -------------------
@@ -682,9 +681,9 @@ package body Calendar_Generic is
    -------------------
 
    procedure Queue_Manager is
-      now : Time;
-      new_timeout : Time;
-      till_timeout : Duration;
+      Now          : Time;
+      New_Timeout  : Time;
+      Till_Timeout : Duration;
    begin
 
       -- if semaphore is above 0 then this is called twice,
@@ -696,78 +695,74 @@ package body Calendar_Generic is
          return;
       end if;
 
-      Semaphore_Event_List := @ +1;
+      Semaphore_Event_List := @ + 1;
 
       while Semaphore_Event_List /= 0 loop
 
-         now := Clock;
+         Now := Clock;
 
          --check entrys of list and process them
-         for Item of Event_List when Item /= null loop
-            if not Item.Canceled and Item.Timeout < now then
+         for Item of Event_List loop
+            if Item /= null
+              and then (not Item.Canceled and (Item.Timeout < Now))
+            then
                Item.Do_This.all;
                if not Item.Do_Periodicly then
                   Item.Canceled := True;
-                  Item := null;
+                  Item          := null;
                else
-                  Item.Timeout := now + Item.Time_Span_Between;
+                  Item.Timeout := Now + Item.Time_Span_Between;
                end if;
             end if;
          end loop;
 
          --find next timeout
-         new_timeout := Find_Next_Timeout;
-         till_timeout := new_timeout - Clock;
+         New_Timeout  := Find_Next_Timeout;
+         Till_Timeout := New_Timeout - Clock;
 
          --check if timespan till timeout fits into register of clock
          declare
-            Register_Val_Sec : register_seconds;
-            Register_Val_Sub_S : register_sub_seconds;
+            Register_Val_Sec               : register_seconds;
+            Register_Val_Sub_S             : register_sub_seconds;
             Now_Sec, Register_Max, New_Val : Long_Long_Integer;
          begin
 
             --compute new alarm value for register and check it fits in
-            Clock_Func(	seconds => Register_Val_Sec,
-                       sub_seconds => Register_Val_Sub_S);
+            Clock_Func
+              (seconds => Register_Val_Sec, sub_seconds => Register_Val_Sub_S);
 
-            Now_Sec := Long_Long_Integer(Register_Val_Sec);
-            Register_Max := Long_Long_Integer(register_seconds'Last);
+            Now_Sec      := Long_Long_Integer (Register_Val_Sec);
+            Register_Max := Long_Long_Integer (register_seconds'Last);
 
-            New_Val := Long_Long_Integer(till_timeout) + Now_Sec;
+            New_Val := Long_Long_Integer (Till_Timeout) + Now_Sec;
 
             if New_Val >= Register_Max then
                -- does not fit so set to Last possible counter reading
                -- if the alarm hits that, the Queue_Manger will set a
                -- new timeout
-               Set_Alarm_Time(register_seconds'Last);
+               Set_Alarm_Time (register_seconds'Last);
             else
-               Set_Alarm_Time(register_seconds(New_Val));
+               Set_Alarm_Time (register_seconds (New_Val));
             end if;
          end;
-         Semaphore_Event_List := @ -1;
+         Semaphore_Event_List := @ - 1;
       end loop;
    end Queue_Manager;
-   -- We set this procedure as the time event handler which gets
-   -- called by the interrupt.
-   -- This procedure will get the current time and call all handlers of the
-   -- event list which have timed out. When called they will be removed from the
-   -- list, but if they are installed as periodicly, they stay and get a new
-   -- timeout.
-   -- After all the pending events have been handeled, we search the Event_List
-   -- for the closest timeout and sets this as the alarm time by calling
-   -- "Set_Alarm_Time (Alarm_Event_Time : register_seconds)"
+-- We set this procedure as the time event handler which gets
+-- called by the interrupt.
+-- This procedure will get the current time and call all handlers of the
+-- event list which have timed out. When called they will be removed from the
+-- list, but if they are installed as periodicly, they stay and get a new
+-- timeout.
+-- After all the pending events have been handeled, we search the Event_List
+-- for the closest timeout and sets this as the alarm time by calling
+-- "Set_Alarm_Time (Alarm_Event_Time : register_seconds)"
    --
    -- the Queue Manager is also called each time after "Set_Handler" so to
    -- ensure we have an up to date alarm time for the closest timeout
    --
 
-
-
    Queue_Manager_Pt : constant access procedure := Queue_Manager'Access;
-
-
-
-
 
    --  Start of elaboration code for Ada.Calendar
 begin
@@ -778,10 +773,6 @@ begin
    Set_Clock_Overflow_Handler (Clock_Overflow_Acc);
 
    --set Queuemanger as clock alarm handler
-   Set_Alarm_Event_Handler(Queue_Manager_Pt);
+   Set_Alarm_Event_Handler (Queue_Manager_Pt);
 
 end Calendar_Generic;
-
-
-
-

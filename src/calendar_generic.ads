@@ -39,11 +39,14 @@
 generic
 
    type register_sub_seconds is mod <>;
-   --the types the of the hardware clock registers, delta 1 == fraction of a
+   --the type the of the hardware clock register, delta 1 => fraction of a
    --second,   fraction is computed by 1/ delta_sub_seconds
+   -- if we have a hardware clock with a prescaler that overruns before
+   -- register_sub_seconds'Last, then we have to call the procedure
+   -- recalculate_sub_sec_detla(overrun_val)
 
    type register_seconds is mod <>;
-   --the types the of the hardware clock registers, delta 1 == delta 1 sec
+   --the type the of the hardware clock registers, delta 1 => delta 1 sec
 
    with procedure Clock_Func
      (seconds : out register_seconds; sub_seconds : out register_sub_seconds);
@@ -54,6 +57,7 @@ generic
    --procdure to set Value in the hw clock register
 
    type access_to_proc is access procedure;
+
    with procedure Set_Clock_Overflow_Handler (Update_Clock : access_to_proc);
    --procdure to attach an handler for an overflow of the hw clock
 
@@ -63,6 +67,8 @@ generic
    with procedure Set_Alarm_Time (Alarm_Event_Time : register_seconds);
    -- seconds of the time, when the Event is suppost to be triggered,
    -- (fraction of seconds are not supported for events)
+
+   Max_Events : Positive := 30;
 
 package Calendar_Generic is
 
@@ -221,9 +227,12 @@ package Calendar_Generic is
 
    function Time_Of_Event (Event : Calendar_Event) return Time;
 
+   procedure Recalculate_Sub_Sec_Detla (Overrun_Value : register_sub_seconds);
+
 private
    --
-   delta_sub_seconds : Duration := 1.0 / Duration (register_sub_seconds'Last);
+   Delta_Sub_Seconds : Duration :=
+     1.0 / Duration (register_sub_seconds'Last + 1);
    --smallest fraction of a second which our hardware messures
 
    pragma Inline (Year);
@@ -294,7 +303,7 @@ private
    type acc_cal_event is access all Calendar_Event;
    --access of calendar event for queue
 
-   subtype index is Integer range 1 .. 30;
+   subtype index is Integer range 1 .. Max_Events;
 
    type cal_event_array is array (index) of acc_cal_event;
    Event_List : cal_event_array;

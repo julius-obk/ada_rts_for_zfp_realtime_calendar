@@ -31,18 +31,19 @@
 
 --  Note: the compiler generates direct calls to this interface, in the
 --  processing of time types.
+with dummys; use dummys;
 
 generic
-
 package Real_Time.Delays is
 
-   function To_Duration (T : Real_Time.time) return Duration;
+   function To_Duration (T : Real_Time.Time) return Duration;
    --  Convert Time to Duration
 
-   procedure Delay_Until (T : time);
+   procedure Delay_Until (T : Time);
    --  Delay until Clock has reached (at least) time T,
 
-   procedure Delay_For (D : Duration);
+   procedure Delay_For
+     (D : Duration); -- with     Export, External_Name => "Delay_For";
    -- Delay unit Duration has passed.
 
 end Real_Time.Delays;

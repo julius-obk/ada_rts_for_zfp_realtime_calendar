@@ -1,0 +1,45 @@
+
+
+
+package Calendar_Generic.Cron is
+
+    -- *        wildcard trigger at any iteration
+    --  1-5     range trigger if iter is 1 till 5
+    -- */5      trigger every 5th step
+    -- 1,4,20   trigger at 1 and 4 and 20
+
+type cron_string is array (Integer range 1 .. 20)  of char;      
+
+
+
+
+    
+subtype Week_Number is Integer 1 .. 7;
+    
+type crontime is record
+    min : Minute_Number;
+    hour : Hour_Number;
+    day : Day_Number;
+    day_of_month : Month_Number;
+    day_of_week : Week_Number;
+end record;
+
+
+
+    
+
+
+
+
+--  -----min
+--  | ----  hour
+--  | | ----  day of month
+--  | | | ---- month
+--  | | | | ---day of week
+--  | | | | |
+--  * * * * * 
+
+
+
+
+end Calendar_Generic.Cron;

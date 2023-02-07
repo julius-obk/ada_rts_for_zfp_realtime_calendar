@@ -80,9 +80,9 @@ package body Real_Time is
    --  slightly heavier, but we can preserve the best accuracy and the lowest
    --  occurrence of overflows.
 
-   pragma Compile_Time_Error
-     (Duration'Size /= 64,
-      "this version of Ada.Real_Time requires 64-bit Duration");
+   --pragma Compile_Time_Error
+   --  (Duration'Size /= 64,
+   --   "this version of Ada.Real_Time requires 64-bit Duration");
 
    -----------------------
    -- Local definitions --
@@ -99,6 +99,8 @@ package body Real_Time is
    -----------------------
    -- Local subprograms --
    -----------------------
+
+   function Count_Per_S return Positive is (Ticks_Per_Second * Overflow_val + 1); -- +1 ( count of 0)
 
    function Mul_Div (V : LLI; M : Natural; D : Positive) return LLI;
    --  Compute V * M / D where division rounds to the nearest integer, away
@@ -169,7 +171,7 @@ package body Real_Time is
    -- "+" --
    ---------
 
-   function "+" (Left : time; Right : Time_Span) return time is
+   function "+" (Left : Time; Right : Time_Span) return Time is
    begin
       --  Overflow checks are performed by hand assuming that Time and
       --  Time_Span are 64-bit unsigned and signed integers respectively.
@@ -179,19 +181,19 @@ package body Real_Time is
       if Right >= 0
         and then Uint_64 (Time_Last) - Uint_64 (Left) >= Uint_64 (Right)
       then
-         return time (Uint_64 (Left) + Uint_64 (Right));
+         return Time (Uint_64 (Left) + Uint_64 (Right));
 
       --  The case of Right = Time_Span'First needs to be treated differently
       --  because the absolute value of -2 ** 63 is not within the range of
       --  Time_Span.
 
       elsif Right = Time_Span'First and then Left >= Max_Neg_Time_Span then
-         return time (Uint_64 (Left) - Max_Neg_Time_Span);
+         return Time (Uint_64 (Left) - Max_Neg_Time_Span);
 
       elsif Right < 0 and then Right > Time_Span'First
-        and then Left >= time (abs (Right))
+        and then Left >= Time (abs (Right))
       then
-         return time (Uint_64 (Left) - Uint_64 (abs (Right)));
+         return Time (Uint_64 (Left) - Uint_64 (abs (Right)));
 
       else
          raise Constraint_Error;
@@ -208,15 +210,15 @@ package body Real_Time is
    -- "-" --
    ---------
 
-   function "-" (Left : time; Right : Time_Span) return time is
+   function "-" (Left : Time; Right : Time_Span) return Time is
    begin
       --  Overflow checks must be performed by hand assuming that Time and
       --  Time_Span are 64-bit unsigned and signed integers respectively.
       --  Otherwise these checks would need an intermediate type with more
       --  than 64-bit.
 
-      if Right >= 0 and then Left >= time (Right) then
-         return time (Uint_64 (Left) - Uint_64 (Right));
+      if Right >= 0 and then Left >= Time (Right) then
+         return Time (Uint_64 (Left) - Uint_64 (Right));
 
       --  The case of Right = Time_Span'First needs to be treated differently
       --  because the absolute value of -2 ** 63 is not within the range of
@@ -225,19 +227,19 @@ package body Real_Time is
       elsif Right = Time_Span'First
         and then Uint_64 (Time_Last) - Uint_64 (Left) >= Max_Neg_Time_Span
       then
-         return Left + time (Max_Neg_Time_Span);
+         return Left + Time (Max_Neg_Time_Span);
 
       elsif Right < 0 and then Right > Time_Span'First
         and then Uint_64 (Time_Last) - Uint_64 (Left) >= Uint_64 (abs (Right))
       then
-         return Left + time (abs (Right));
+         return Left + Time (abs (Right));
 
       else
          raise Constraint_Error;
       end if;
    end "-";
 
-   function "-" (Left, Right : time) return Time_Span is
+   function "-" (Left, Right : Time) return Time_Span is
    begin
       --  Overflow checks must be performed by hand assuming that Time and
       --  Time_Span are 64-bit unsigned and signed integers respectively.
@@ -293,12 +295,15 @@ package body Real_Time is
    -- Clock --
    -----------
 
-   function Clock return time is
-      now   : time := Overflow_Counter;
+   function Clock return Time is
+      now   : Time := Overflow_Counter;
       sub_s : Timer_Register_Sub_Seconds;
    begin
       Clock_Func (Sub_S => sub_s);
-      now := now + time (sub_s);
+      if Counts_Down then
+         sub_s := Timer_Register_Sub_Seconds (Overflow_val) - sub_s;
+      end if;
+      now := now + Time (sub_s);
       return now;
    end Clock;
 
@@ -308,9 +313,9 @@ package body Real_Time is
 
    function Microseconds (US : Integer) return Time_Span is
    begin
-      --  Overflow can't happen (Ticks_Per_Second is Natural)
+      --  Overflow can't happen (Count_Per_S is Natural)
 
-      return Time_Span (Rounded_Div (LLI (US) * LLI (Ticks_Per_Second), 1E6));
+      return Time_Span (Rounded_Div (LLI (US) * LLI (Count_Per_S), 1E6));
    end Microseconds;
 
    ------------------
@@ -319,9 +324,9 @@ package body Real_Time is
 
    function Milliseconds (MS : Integer) return Time_Span is
    begin
-      --  Overflow can't happen (Ticks_Per_Second is Natural)
+      --  Overflow can't happen (Count_Per_S is Natural)
 
-      return Time_Span (Rounded_Div (LLI (MS) * LLI (Ticks_Per_Second), 1E3));
+      return Time_Span (Rounded_Div (LLI (MS) * LLI (Count_Per_S), 1E3));
    end Milliseconds;
 
    -------------
@@ -329,8 +334,8 @@ package body Real_Time is
    -------------
 
    function Minutes (M : Integer) return Time_Span is
-      Min_M : constant LLI := LLI'First / LLI (Ticks_Per_Second);
-      Max_M : constant LLI := LLI'Last / LLI (Ticks_Per_Second);
+      Min_M : constant LLI := LLI'First / LLI (Count_Per_S);
+      Max_M : constant LLI := LLI'Last / LLI (Count_Per_S);
       --  Bounds for Sec_M. Note that we can't use unsuppress overflow checks,
       --  as this would require the use of arit64.
 
@@ -341,7 +346,7 @@ package body Real_Time is
       if Sec_M < Min_M or else Sec_M > Max_M then
          raise Constraint_Error;
       else
-         return Time_Span (Sec_M * LLI (Ticks_Per_Second));
+         return Time_Span (Sec_M * LLI (Count_Per_S));
       end if;
    end Minutes;
 
@@ -474,9 +479,9 @@ package body Real_Time is
 
    function Nanoseconds (NS : Integer) return Time_Span is
    begin
-      --  Overflow can't happen (Ticks_Per_Second is Natural)
+      --  Overflow can't happen (Count_Per_S is Natural)
 
-      return Time_Span (Rounded_Div (LLI (NS) * LLI (Ticks_Per_Second), 1E9));
+      return Time_Span (Rounded_Div (LLI (NS) * LLI (Count_Per_S), 1E9));
    end Nanoseconds;
 
    -----------------
@@ -501,28 +506,28 @@ package body Real_Time is
 
    function Seconds (S : Integer) return Time_Span is
    begin
-      --  Overflow can't happen (Ticks_Per_Second is Natural)
+      --  Overflow can't happen (Count_Per_S is Natural)
 
-      return Time_Span (LLI (S) * LLI (Ticks_Per_Second));
+      return Time_Span (LLI (S) * LLI (Count_Per_S));
    end Seconds;
 
    -----------
    -- Split --
    -----------
 
-   procedure Split (T : time; SC : out Seconds_Count; TS : out Time_Span) is
-      Res : constant time := time (Ticks_Per_Second);
+   procedure Split (T : Time; SC : out Seconds_Count; TS : out Time_Span) is
+      Res : constant Time := Time (Count_Per_S);
    begin
       SC := Seconds_Count (T / Res);
-      TS := T - time (SC) * Res;
+      TS := T - Time (SC) * Res;
    end Split;
 
    -------------
    -- Time_Of --
    -------------
 
-   function Time_Of (SC : Seconds_Count; TS : Time_Span) return time is
-      Res : constant time := time (Ticks_Per_Second);
+   function Time_Of (SC : Seconds_Count; TS : Time_Span) return Time is
+      Res : constant Time := Time (Count_Per_S);
 
    begin
       --  We want to return SC * Resolution + TS. To avoid spurious overflows
@@ -546,7 +551,7 @@ package body Real_Time is
             --  Absolute value of the number of seconds in TS. Round towards
             --  infinity so that Remainder_Ts is always positive.
 
-            Remainder_Ts : constant time :=
+            Remainder_Ts : constant Time :=
               TS + Time_Span (Seconds_From_Ts - 1) * Time_Span (Res) + Res;
             --  Remainder from TS that needs to be added to the result once
             --  we removed the number of seconds. Note that we do not add
@@ -561,17 +566,17 @@ package body Real_Time is
             --  TS would overflow anyway.
 
             if SC < Seconds_From_Ts
-              or else Time_Last / Res < time (SC - Seconds_From_Ts)
+              or else Time_Last / Res < Time (SC - Seconds_From_Ts)
             then
                raise Constraint_Error;
             else
-               return time (SC - Seconds_From_Ts) * Res + Remainder_Ts;
+               return Time (SC - Seconds_From_Ts) * Res + Remainder_Ts;
             end if;
          end;
 
          --  SC and TS are nonnegative. Check whether Time (SC) * Res overflows
 
-      elsif Time_Last / Res < time (SC) then
+      elsif Time_Last / Res < Time (SC) then
          raise Constraint_Error;
 
       --  Both operands have the same sign, so we can convert SC into Time
@@ -580,7 +585,7 @@ package body Real_Time is
       --  overflow a bit earlier).
 
       else
-         return time (SC) * Res + TS;
+         return Time (SC) * Res + TS;
       end if;
    end Time_Of;
 
@@ -592,7 +597,7 @@ package body Real_Time is
    begin
       return
         To_Duration
-          (Mul_Div (To_Integer (TS), Duration_Units, Ticks_Per_Second));
+          (Mul_Div (To_Integer (TS), Duration_Units, Positive (Count_Per_S)));
    end To_Duration;
 
    ------------------
@@ -601,17 +606,26 @@ package body Real_Time is
 
    function To_Time_Span (D : Duration) return Time_Span is
    begin
-      return
-        Time_Span (Mul_Div (To_Integer (D), Ticks_Per_Second, Duration_Units));
+      return Time_Span (Mul_Div (To_Integer (D), Count_Per_S, Duration_Units));
    end To_Time_Span;
 
    procedure Update_Overflow_Counter is
    begin
       Overflow_Counter :=
-        Overflow_Counter + time (Timer_Register_Sub_Seconds'Last) + time (1);
+        Overflow_Counter + Time (Timer_Register_Sub_Seconds'Last) + Time (1);
    end Update_Overflow_Counter;
 
-begin
-   Attach_Overflow_Handler (Handler => Up_Overlw_Access);
+   procedure Change_Ticks_Per_Sec (New_Val : Positive) is
+   begin
+      Ticks_Per_Second := New_Val;
+   end Change_Ticks_Per_Sec;
+
+   procedure Change_Count_Per_Tick (New_Val : Positive) is
+   begin
+      Overflow_val := New_Val;
+   end Change_Count_Per_Tick;
+
+--begin
+   -- Attach_Overflow_Handler (Handler => Tick_1_S'Access);
 
 end Real_Time;

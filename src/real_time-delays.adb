@@ -41,7 +41,7 @@ package body Real_Time.Delays is
       now : time := Clock;
    begin
       -- check the Clock until the time has come
-      while now < Clock loop
+      while now < T loop
          now := Clock;
       end loop;
    end Delay_Until;

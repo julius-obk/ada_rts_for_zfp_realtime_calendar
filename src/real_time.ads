@@ -33,32 +33,38 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
--- this is supposted to be used with an hardware timer, that should overflow
+-- this is supposed to be used with an hardware timer, that should overflow
 -- one time per second and trigger an interrupt
 -- we use this interrupt to update our overflow counter, + Ticks_Per_Second for
 -- each overflow
 
 generic
-   Ticks_Per_Second : Positive;
+   Counts_Down : Boolean := True;
+   Ticks_P_Sec : Positive;
+   -- times this much ticks per second, is used to compute seconds and so on,
+   -- if this changes, call procedure Change_Ticks(new_value)
 
    type Timer_Register_Sub_Seconds is mod <>;
    -- type of the register where our time is counted
 
+   Count_Per_Tick : Positive;
+   -- at this number the timer resets / overflows / generates a tick, and restarts
+
    with procedure Clock_Func (Sub_S : out Timer_Register_Sub_Seconds);
    --function to get the current value of our timer
 
-   type proc_acc is access procedure;
-   with procedure Attach_Overflow_Handler (Handler : proc_acc);
-   --handler of timer overflow
+--type proc_acc is access procedure;
+--with procedure Attach_Overflow_Handler (Handler : access procedure);
+--handler of timer overflow
 
 package Real_Time is
-   pragma Compile_Time_Error
-     (Ticks_Per_Second < 50_000,
-      "Ada RM D.8 (30) requires " &
-      "that Time_Unit shall be less than or equal to 20 microseconds");
-   pragma Compile_Time_Error
-     (Duration'Size /= 64,
-      "this version of Ada.Real_Time requires 64-bit Duration");
+   --pragma Compile_Time_Error
+   --  (Ticks_Per_Second < 50_000,
+   --   "Ada RM D.8 (30) requires " &
+   --   "that Time_Unit shall be less than or equal to 20 microseconds");
+   --pragma Compile_Time_Error
+   --  (Duration'Size /= 64,
+   --   "this version of Ada.Real_Time requires 64-bit Duration");
 
    --  Time_Unit : constant := 1.0 / Ticks_Per_Second;
 
@@ -125,18 +131,25 @@ package Real_Time is
 
    Time_Error : exception;
 
-private
-
-   pragma SPARK_Mode (Off);
-
-   type time is mod 2**64;
-
    procedure Update_Overflow_Counter;
-   Up_Overlw_Access : constant access procedure :=
+   --Up_Overlw_Access : constant access procedure :=
+   --  Update_Overflow_Counter'Access;
+   Overflow_Callback : constant access procedure :=
      Update_Overflow_Counter'Access;
 
-   Time_First : constant time := time'First;
-   Time_Last  : constant time := time'Last;
+   procedure Change_Ticks_Per_Sec (New_Val : Positive);
+   procedure Change_Count_Per_Tick (New_Val : Positive);
+
+private
+   function Count_Per_S return Positive;
+
+   Ticks_Per_Second : Positive := Ticks_P_Sec;
+   Overflow_val     : Positive := Count_Per_Tick;
+
+   type Time is mod 2**64;
+
+   Time_First : constant Time := Time'First;
+   Time_Last  : constant Time := Time'Last;
 
    type Time_Span is range -2**63 .. 2**63 - 1;
 
@@ -161,7 +174,7 @@ private
    pragma Inline (Seconds);
    pragma Inline (Minutes);
 
-   Overflow_Counter : time := 0 with
-      Volatile;
+   Overflow_Counter : Time := 0 with
+     Volatile;
 
 end Real_Time;
